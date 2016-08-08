@@ -285,8 +285,10 @@ public class DetailFragment extends Fragment implements LoaderManager.LoaderCall
                 finishCreatingMenu(toolbarView.getMenu());
             }
         }
+
     }
 
     @Override
     public void onLoaderReset(Loader<Cursor> loader) { }
+
 }

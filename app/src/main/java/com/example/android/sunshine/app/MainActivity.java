@@ -20,6 +20,8 @@ import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.ActivityOptionsCompat;
 import android.support.v4.util.Pair;
@@ -35,8 +37,15 @@ import com.example.android.sunshine.app.gcm.RegistrationIntentService;
 import com.example.android.sunshine.app.sync.SunshineSyncAdapter;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.common.api.Result;
+import com.google.android.gms.common.api.ResultCallback;
+import com.google.android.gms.wearable.PutDataMapRequest;
+import com.google.android.gms.wearable.PutDataRequest;
+import com.google.android.gms.wearable.Wearable;
 
-public class MainActivity extends AppCompatActivity implements ForecastFragment.Callback {
+public class MainActivity extends AppCompatActivity implements ForecastFragment.Callback,
+        GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener {
 
     private final String LOG_TAG = MainActivity.class.getSimpleName();
     private static final String DETAILFRAGMENT_TAG = "DFTAG";
@@ -45,12 +54,19 @@ public class MainActivity extends AppCompatActivity implements ForecastFragment.
 
     private boolean mTwoPane;
     private String mLocation;
+    private GoogleApiClient apiClient;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         mLocation = Utility.getPreferredLocation(this);
         Uri contentUri = getIntent() != null ? getIntent().getData() : null;
+
+        apiClient = new GoogleApiClient.Builder(this)
+                .addConnectionCallbacks(this)
+                .enableAutoManage(this, this)
+                .addApi(Wearable.API)
+                .build();
 
         setContentView(R.layout.activity_main);
         Toolbar toolbar = (Toolbar)findViewById(R.id.toolbar);
@@ -195,5 +211,43 @@ public class MainActivity extends AppCompatActivity implements ForecastFragment.
             return false;
         }
         return true;
+    }
+
+    @Override
+    public void onConnected(@Nullable Bundle bundle) {
+        // Update wear device
+        Log.d("wear", "onConnected");
+        if(apiClient.isConnected()) {
+            //create the dataMapRequest with a path from constants.Path must start with a /
+            PutDataMapRequest putDataMapRequest = PutDataMapRequest.create(Constants.RUN_UPDATE_NOTIFICATION);
+            putDataMapRequest.getDataMap().putString(Constants.KEY_TITLE, "title");
+            putDataMapRequest.getDataMap().putString(Constants.KEY_CONTENT, "some other string data");
+            PutDataRequest request = putDataMapRequest.asPutDataRequest();
+            Log.d("wear", "put data");
+            Wearable.DataApi.putDataItem(apiClient, request).setResultCallback(new ResultCallback() {
+                @Override
+                public void onResult(@NonNull Result result) {
+                    if (!result.getStatus().isSuccess()) {
+                        //data sync failed
+                        Log.d("wear", "put data was failure");
+                    } else {
+                        //data sync was  success
+                        Log.d("wear", "put data was success");
+                    }
+                }
+            });
+        } else {
+            Log.d("wear", "not connected");
+        }
+    }
+
+    @Override
+    public void onConnectionSuspended(int i) {
+        Log.d("wear", "on conn sus");
+    }
+
+    @Override
+    public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
+        Log.d("wear", "on conn failed");
     }
 }
