@@ -19,6 +19,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
 import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -38,19 +39,26 @@ import com.example.android.sunshine.app.sync.SunshineSyncAdapter;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.common.api.PendingResult;
 import com.google.android.gms.common.api.Result;
 import com.google.android.gms.common.api.ResultCallback;
+import com.google.android.gms.wearable.DataApi;
+import com.google.android.gms.wearable.DataEventBuffer;
+import com.google.android.gms.wearable.DataItemBuffer;
+import com.google.android.gms.wearable.DataMapItem;
 import com.google.android.gms.wearable.PutDataMapRequest;
 import com.google.android.gms.wearable.PutDataRequest;
 import com.google.android.gms.wearable.Wearable;
 
 public class MainActivity extends AppCompatActivity implements ForecastFragment.Callback,
-        GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener {
+        GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener,
+        DataApi.DataListener {
 
     private final String LOG_TAG = MainActivity.class.getSimpleName();
     private static final String DETAILFRAGMENT_TAG = "DFTAG";
     private final static int PLAY_SERVICES_RESOLUTION_REQUEST = 9000;
     public static final String SENT_TOKEN_TO_SERVER = "sentTokenToServer";
+    public static String TAG = "nano6dev";
 
     private boolean mTwoPane;
     private String mLocation;
@@ -69,7 +77,7 @@ public class MainActivity extends AppCompatActivity implements ForecastFragment.
                 .build();
 
         setContentView(R.layout.activity_main);
-        Toolbar toolbar = (Toolbar)findViewById(R.id.toolbar);
+        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         getSupportActionBar().setDisplayShowTitleEnabled(false);
 
@@ -97,7 +105,7 @@ public class MainActivity extends AppCompatActivity implements ForecastFragment.
             getSupportActionBar().setElevation(0f);
         }
 
-        ForecastFragment forecastFragment =  ((ForecastFragment)getSupportFragmentManager()
+        ForecastFragment forecastFragment = ((ForecastFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.fragment_forecast));
         forecastFragment.setUseTodayLayout(!mTwoPane);
         if (contentUri != null) {
@@ -151,15 +159,15 @@ public class MainActivity extends AppCompatActivity implements ForecastFragment.
     @Override
     protected void onResume() {
         super.onResume();
-        String location = Utility.getPreferredLocation( this );
+        String location = Utility.getPreferredLocation(this);
         // update the location in our second pane using the fragment manager
-            if (location != null && !location.equals(mLocation)) {
-            ForecastFragment ff = (ForecastFragment)getSupportFragmentManager().findFragmentById(R.id.fragment_forecast);
-            if ( null != ff ) {
+        if (location != null && !location.equals(mLocation)) {
+            ForecastFragment ff = (ForecastFragment) getSupportFragmentManager().findFragmentById(R.id.fragment_forecast);
+            if (null != ff) {
                 ff.onLocationChanged();
             }
-            DetailFragment df = (DetailFragment)getSupportFragmentManager().findFragmentByTag(DETAILFRAGMENT_TAG);
-            if ( null != df ) {
+            DetailFragment df = (DetailFragment) getSupportFragmentManager().findFragmentByTag(DETAILFRAGMENT_TAG);
+            if (null != df) {
                 df.onLocationChanged(location);
             }
             mLocation = location;
@@ -216,38 +224,79 @@ public class MainActivity extends AppCompatActivity implements ForecastFragment.
     @Override
     public void onConnected(@Nullable Bundle bundle) {
         // Update wear device
-        Log.d("wear", "onConnected");
-        if(apiClient.isConnected()) {
-            //create the dataMapRequest with a path from constants.Path must start with a /
-            PutDataMapRequest putDataMapRequest = PutDataMapRequest.create(Constants.RUN_UPDATE_NOTIFICATION);
-            putDataMapRequest.getDataMap().putString(Constants.KEY_TITLE, "title");
-            putDataMapRequest.getDataMap().putString(Constants.KEY_CONTENT, "some other string data");
-            PutDataRequest request = putDataMapRequest.asPutDataRequest();
-            Log.d("wear", "put data");
-            Wearable.DataApi.putDataItem(apiClient, request).setResultCallback(new ResultCallback() {
-                @Override
-                public void onResult(@NonNull Result result) {
-                    if (!result.getStatus().isSuccess()) {
-                        //data sync failed
-                        Log.d("wear", "put data was failure");
-                    } else {
-                        //data sync was  success
-                        Log.d("wear", "put data was success");
-                    }
-                }
-            });
+        Log.d(TAG, "onConnected");
+        Wearable.DataApi.addListener(apiClient, this);
+        if (apiClient.isConnected()) {
+            sendData();
         } else {
-            Log.d("wear", "not connected");
+            Log.d(TAG, "not connected");
         }
+    }
+
+    private int count = 0;
+
+    private void sendDelayedData() {
+        new Handler(getApplicationContext().getMainLooper())
+                .postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        ++count;
+                        Log.d(TAG, "sendData " + count);
+                        sendData();
+                        sendDelayedData();
+                    }
+                }, 2000);
+    }
+
+    public void sendData() {
+        //create the dataMapRequest with a path from constants.Path must start with a /
+        PutDataMapRequest putDataMapRequest = PutDataMapRequest.create(Constants.RUN_UPDATE_NOTIFICATION);
+        putDataMapRequest.getDataMap().putLong("Time", System.currentTimeMillis());
+        PutDataRequest request = putDataMapRequest.asPutDataRequest();
+        Log.d(TAG, "put data");
+        Wearable.DataApi.putDataItem(apiClient, request).setResultCallback(new ResultCallback() {
+            @Override
+            public void onResult(@NonNull Result result) {
+                if (!result.getStatus().isSuccess()) {
+                    //data sync failed
+                    Log.d(TAG, "put data was failure");
+                } else {
+                    //data sync was  success
+                    Log.d(TAG, "put data was success");
+                    PendingResult<DataItemBuffer> results = Wearable.DataApi.getDataItems(apiClient);
+                    results.setResultCallback(new ResultCallback<DataItemBuffer>() {
+                        @Override
+                        public void onResult(DataItemBuffer dataItems) {
+                            if (dataItems.getCount() != 0) {
+                                DataMapItem dataMapItem = DataMapItem.fromDataItem(dataItems.get(0));
+
+                                // This should read the correct value.
+                                long time = dataMapItem.getDataMap().getLong("Time");
+
+                                Log.d(TAG, "got time: " + time);
+                            }
+
+                            dataItems.release();
+                        }
+                    });
+                }
+            }
+        });
     }
 
     @Override
     public void onConnectionSuspended(int i) {
-        Log.d("wear", "on conn sus");
+        Log.d(TAG, "on conn sus");
     }
 
     @Override
     public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
-        Log.d("wear", "on conn failed");
+        Log.d(TAG, "on conn failed");
+    }
+
+    @Override
+    public void onDataChanged(DataEventBuffer dataEventBuffer) {
+        Log.d(TAG, "onDataChanged");
+        sendData();
     }
 }

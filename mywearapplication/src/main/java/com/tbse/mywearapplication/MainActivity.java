@@ -11,20 +11,25 @@ import android.widget.TextView;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.wearable.DataApi;
+import com.google.android.gms.wearable.DataEventBuffer;
 import com.google.android.gms.wearable.Wearable;
 
 public class MainActivity extends Activity
         implements GoogleApiClient.ConnectionCallbacks,
-        GoogleApiClient.OnConnectionFailedListener  {
+        GoogleApiClient.OnConnectionFailedListener,
+        DataApi.DataListener {
 
     private TextView mTextView;
     private GoogleApiClient apiClient;
     private Intent serviceIntent;
+    public static String TAG = "nano6wear";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        mTextView = (TextView) findViewById(R.id.text);
         serviceIntent = new Intent(this, WatchUpdateService.class);
 
         apiClient = new GoogleApiClient.Builder(this)
@@ -50,6 +55,12 @@ public class MainActivity extends Activity
     }
 
     @Override
+    protected void onPause() {
+        Wearable.DataApi.removeListener(apiClient, this);
+        super.onPause();
+    }
+
+    @Override
     protected void onStop() {
         apiClient.disconnect();
         stopService(serviceIntent);
@@ -58,16 +69,22 @@ public class MainActivity extends Activity
 
     @Override
     public void onConnected(@Nullable Bundle bundle) {
-        Log.d("wear", "wear onConnected");
+        Log.d(TAG, "onConnected");
+        Wearable.DataApi.addListener(apiClient, this);
     }
 
     @Override
     public void onConnectionSuspended(int i) {
-        Log.d("wear", "wear on conn sus");
+        Log.d(TAG, "on conn sus");
     }
 
     @Override
     public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
-        Log.d("wear", "wear on conn failed");
+        Log.d(TAG, "on conn failed");
+    }
+
+    @Override
+    public void onDataChanged(DataEventBuffer dataEventBuffer) {
+        Log.d(TAG, "onDataChanged");
     }
 }

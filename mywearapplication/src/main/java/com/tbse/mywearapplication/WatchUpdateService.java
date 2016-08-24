@@ -9,26 +9,30 @@ import com.google.android.gms.wearable.DataMap;
 import com.google.android.gms.wearable.DataMapItem;
 import com.google.android.gms.wearable.WearableListenerService;
 
+import static com.tbse.mywearapplication.MainActivity.TAG;
+
 /**
  * Created by todd on 8/7/16.
  */
 
 public class WatchUpdateService extends WearableListenerService {
+
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        Log.d("wear", "wear onStartCommand");
+        Log.d(TAG, "onStartCommand");
         return super.onStartCommand(intent, flags, startId);
     }
 
     @Override
     public void onDataChanged(DataEventBuffer dataEvents) {
-        Log.d("wear", "wear onDataChanged");
+        Log.d(TAG, "onDataChanged");
         for (DataEvent dataEvent : dataEvents) {
             if (dataEvent.getType() == DataEvent.TYPE_CHANGED) {
                 DataMap dataMap = DataMapItem.fromDataItem(dataEvent.getDataItem()).getDataMap();
-                dataMap.putLong("Time",System.currentTimeMillis());
-                if("/update".equalsIgnoreCase(dataEvent.getDataItem().getUri().getPath())){
-                    Log.d("wear", "device updated");
+                long time = dataMap.getLong("Time");
+                Log.d(TAG, "onDataChanged time is " + time);
+                if ("/update".equalsIgnoreCase(dataEvent.getDataItem().getUri().getPath())) {
+                    Log.d(TAG, "device updated");
                 }
             }
         }
