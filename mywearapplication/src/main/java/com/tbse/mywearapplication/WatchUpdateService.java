@@ -9,13 +9,9 @@ import com.google.android.gms.wearable.DataMap;
 import com.google.android.gms.wearable.DataMapItem;
 import com.google.android.gms.wearable.WearableListenerService;
 
-import static com.tbse.mywearapplication.MainActivity.TAG;
-
-/**
- * Created by todd on 8/7/16.
- */
-
 public class WatchUpdateService extends WearableListenerService {
+
+    private static String TAG = "nanoWatchUpdateService";
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {

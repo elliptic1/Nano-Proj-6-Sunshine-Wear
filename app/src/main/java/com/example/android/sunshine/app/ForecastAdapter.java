@@ -17,15 +17,12 @@ package com.example.android.sunshine.app;
 
 import android.content.Context;
 import android.database.Cursor;
-import android.os.Build;
 import android.os.Bundle;
 import android.support.v4.view.ViewCompat;
 import android.support.v7.widget.RecyclerView;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Checkable;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -49,6 +46,7 @@ public class ForecastAdapter extends RecyclerView.Adapter<ForecastAdapter.Foreca
     final private ForecastAdapterOnClickHandler mClickHandler;
     final private View mEmptyView;
     final private ItemChoiceManager mICM;
+    final private WearDataSender wearDataSender;
 
     /**
      * Cache of the children views for a forecast list item.
@@ -77,6 +75,12 @@ public class ForecastAdapter extends RecyclerView.Adapter<ForecastAdapter.Foreca
             int dateColumnIndex = mCursor.getColumnIndex(WeatherContract.WeatherEntry.COLUMN_DATE);
             mClickHandler.onClick(mCursor.getLong(dateColumnIndex), this);
             mICM.onClick(this);
+            Bundle bundle = new Bundle();
+            bundle.putString("Day", mDateView.getText().toString());
+            bundle.putString("Description", mDescriptionView.getText().toString());
+            bundle.putString("High", mHighTempView.getText().toString());
+            bundle.putString("Low", mLowTempView.getText().toString());
+            wearDataSender.sendData(bundle);
         }
     }
 
@@ -90,6 +94,7 @@ public class ForecastAdapter extends RecyclerView.Adapter<ForecastAdapter.Foreca
         mEmptyView = emptyView;
         mICM = new ItemChoiceManager(this);
         mICM.setChoiceMode(choiceMode);
+        wearDataSender = (MainActivity) context;
     }
 
     /*

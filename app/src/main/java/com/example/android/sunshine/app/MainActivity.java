@@ -19,7 +19,6 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.Handler;
 import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -50,9 +49,11 @@ import com.google.android.gms.wearable.PutDataMapRequest;
 import com.google.android.gms.wearable.PutDataRequest;
 import com.google.android.gms.wearable.Wearable;
 
+import pl.tajchert.exceptionwear.ExceptionDataListenerService;
+
 public class MainActivity extends AppCompatActivity implements ForecastFragment.Callback,
         GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener,
-        DataApi.DataListener {
+        DataApi.DataListener, WearDataSender {
 
     private final String LOG_TAG = MainActivity.class.getSimpleName();
     private static final String DETAILFRAGMENT_TAG = "DFTAG";
@@ -67,6 +68,9 @@ public class MainActivity extends AppCompatActivity implements ForecastFragment.
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        ExceptionDataListenerService.setHandler(new CustomHandlerCrashlytics());
+
         mLocation = Utility.getPreferredLocation(this);
         Uri contentUri = getIntent() != null ? getIntent().getData() : null;
 
@@ -226,32 +230,19 @@ public class MainActivity extends AppCompatActivity implements ForecastFragment.
         // Update wear device
         Log.d(TAG, "onConnected");
         Wearable.DataApi.addListener(apiClient, this);
-        if (apiClient.isConnected()) {
-            sendData();
-        } else {
-            Log.d(TAG, "not connected");
-        }
     }
 
     private int count = 0;
 
-    private void sendDelayedData() {
-        new Handler(getApplicationContext().getMainLooper())
-                .postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
-                        ++count;
-                        Log.d(TAG, "sendData " + count);
-                        sendData();
-                        sendDelayedData();
-                    }
-                }, 2000);
-    }
-
-    public void sendData() {
+    @Override
+    public void sendData(Bundle b) {
         //create the dataMapRequest with a path from constants.Path must start with a /
         PutDataMapRequest putDataMapRequest = PutDataMapRequest.create(Constants.RUN_UPDATE_NOTIFICATION);
         putDataMapRequest.getDataMap().putLong("Time", System.currentTimeMillis());
+        putDataMapRequest.getDataMap().putString("Day", b.getString("Day"));
+        putDataMapRequest.getDataMap().putString("High", b.getString("High"));
+        putDataMapRequest.getDataMap().putString("Low", b.getString("Low"));
+        putDataMapRequest.getDataMap().putString("Description", b.getString("Description"));
         PutDataRequest request = putDataMapRequest.asPutDataRequest();
         Log.d(TAG, "put data");
         Wearable.DataApi.putDataItem(apiClient, request).setResultCallback(new ResultCallback() {
@@ -297,6 +288,5 @@ public class MainActivity extends AppCompatActivity implements ForecastFragment.
     @Override
     public void onDataChanged(DataEventBuffer dataEventBuffer) {
         Log.d(TAG, "onDataChanged");
-        sendData();
     }
 }

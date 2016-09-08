@@ -1,10 +1,32 @@
+buildscript {
+    repositories {
+        maven { url 'https://maven.fabric.io/public' }
+    }
+
+    dependencies {
+        classpath 'io.fabric.tools:gradle:1.21.7'
+    }
+}
 apply plugin: 'com.android.application'
+apply plugin: 'io.fabric'
+
+repositories {
+    maven { url 'https://maven.fabric.io/public' }
+}
+
 apply plugin: 'com.google.gms.google-services'
 
 android {
+    signingConfigs {
+        config {
+            keyAlias 'keyalias'
+            keyPassword '675rulE'
+            storeFile file('/home/todd/workspace/Nano-Proj-6-Sunshine-Wear/keystore.jks')
+            storePassword '675rulE'
+        }
+    }
     compileSdkVersion 24
     buildToolsVersion "24.0.1"
-
     defaultConfig {
         applicationId "com.example.android.sunshine.app"
         minSdkVersion 21
@@ -16,6 +38,7 @@ android {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.config
         }
     }
     buildTypes.each {
@@ -39,4 +62,11 @@ dependencies {
     compile "com.google.android.gms:play-services-location:${gpsVersion}"
     compile "com.google.android.gms:play-services-wearable:${gpsVersion}"
     compile "com.google.android.gms:play-services-places:${gpsVersion}"
+    compile 'pl.tajchert:exceptionwear:0.1.2'
+    compile('com.crashlytics.sdk.android:crashlytics:2.6.2@aar') {
+        transitive = true;
+    }
+    compile 'com.google.android.gms:play-services:9.4.0@aar'
+    compile "com.android.support:support-v4:${supportVersion}"
+    wearApp project(':mywearapplication')
 }
