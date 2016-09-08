@@ -5,6 +5,8 @@
 *.apk
 *.ap_
 
+*.jks
+
 # files for the dex VM
 *.dex
 
