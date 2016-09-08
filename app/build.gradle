@@ -66,7 +66,7 @@ dependencies {
     compile('com.crashlytics.sdk.android:crashlytics:2.6.2@aar') {
         transitive = true;
     }
-    compile 'com.google.android.gms:play-services:9.4.0@aar'
+    compile "com.google.android.gms:play-services:${gpsVersion}@aar"
     compile "com.android.support:support-v4:${supportVersion}"
     wearApp project(':mywearapplication')
 }

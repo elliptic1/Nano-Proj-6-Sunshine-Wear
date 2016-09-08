@@ -59,12 +59,13 @@ public class MainActivity extends Activity
         stub.setOnLayoutInflatedListener(new WatchViewStub.OnLayoutInflatedListener() {
             @Override
             public void onLayoutInflated(WatchViewStub stub) {
-                mTimeInfoReceiver.onReceive(MainActivity.this, registerReceiver(null, INTENT_FILTER));    //  Here, we're just calling our onReceive() so it can set the current time.
-                registerReceiver(mTimeInfoReceiver, INTENT_FILTER);
+                mTimeTextView = (TextView) stub.findViewById(R.id.time);
                 mDayTextView = (TextView) stub.findViewById(R.id.day);
                 mHighTextView = (TextView) stub.findViewById(R.id.high);
                 mLowTextView = (TextView) stub.findViewById(R.id.low);
                 mDescriptionTextView = (TextView) stub.findViewById(R.id.description);
+                registerReceiver(mTimeInfoReceiver, INTENT_FILTER);
+                mTimeInfoReceiver.onReceive(MainActivity.this, registerReceiver(null, INTENT_FILTER));    //  Here, we're just calling our onReceive() so it can set the current time.
             }
         });
     }
