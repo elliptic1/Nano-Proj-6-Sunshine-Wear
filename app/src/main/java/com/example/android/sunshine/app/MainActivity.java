@@ -49,8 +49,6 @@ import com.google.android.gms.wearable.PutDataMapRequest;
 import com.google.android.gms.wearable.PutDataRequest;
 import com.google.android.gms.wearable.Wearable;
 
-import pl.tajchert.exceptionwear.ExceptionDataListenerService;
-
 public class MainActivity extends AppCompatActivity implements ForecastFragment.Callback,
         GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener,
         DataApi.DataListener, WearDataSender {
@@ -68,8 +66,6 @@ public class MainActivity extends AppCompatActivity implements ForecastFragment.
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-        ExceptionDataListenerService.setHandler(new CustomHandlerCrashlytics());
 
         mLocation = Utility.getPreferredLocation(this);
         Uri contentUri = getIntent() != null ? getIntent().getData() : null;

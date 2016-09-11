@@ -1,5 +1,7 @@
 # Nano-Proj-6-Sunshine-Wear
 
+# Some watchface code from https://github.com/patloew/watch-face-example
+
 ---- Original README-----
 Advanced Android Sample App
 ===================================
