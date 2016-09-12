@@ -25,10 +25,21 @@ import android.graphics.Rect;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.wearable.watchface.CanvasWatchFaceService;
 import android.support.wearable.watchface.WatchFaceStyle;
+import android.util.Log;
 import android.view.SurfaceHolder;
 import android.view.WindowInsets;
+
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.wearable.DataApi;
+import com.google.android.gms.wearable.DataEventBuffer;
+import com.google.android.gms.wearable.DataMap;
+import com.google.android.gms.wearable.DataMapItem;
+import com.google.android.gms.wearable.Wearable;
 
 import java.lang.ref.WeakReference;
 import java.util.Calendar;
@@ -40,6 +51,8 @@ import java.util.TimeZone;
  * devices with low-bit ambient mode, the hands are drawn without anti-aliasing in ambient mode.
  */
 public class ExampleWatchFace extends CanvasWatchFaceService {
+
+    private static String TAG = "Nano6-ExampleWatchFace";
 
     /**
      * Update rate in milliseconds for interactive mode. We update once a second to advance the
@@ -57,7 +70,10 @@ public class ExampleWatchFace extends CanvasWatchFaceService {
         return new Engine();
     }
 
-    private class Engine extends CanvasWatchFaceService.Engine implements IWatchFaceConfig {
+    private class Engine extends CanvasWatchFaceService.Engine implements IWatchFaceConfig,
+            GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener,
+            DataApi.DataListener {
+
         WatchFaceDrawer mWatchfaceDrawer;
 
         boolean mAmbient = false;
@@ -75,6 +91,7 @@ public class ExampleWatchFace extends CanvasWatchFaceService {
             }
         };
         boolean mRegisteredTimeZoneReceiver = false;
+        private GoogleApiClient apiClient;
 
         boolean mLightTheme = true;
 
@@ -84,6 +101,15 @@ public class ExampleWatchFace extends CanvasWatchFaceService {
 
             mWatchfaceDrawer = new WatchFaceDrawer(getApplicationContext());
             setNewWatchFaceStyle();
+
+            apiClient = new GoogleApiClient.Builder(getApplicationContext())
+                    .addConnectionCallbacks(this)
+                    .addApi(Wearable.API)
+                    .build();
+
+            apiClient.connect();
+
+
         }
 
         private void setNewWatchFaceStyle() {
@@ -93,13 +119,18 @@ public class ExampleWatchFace extends CanvasWatchFaceService {
                     .setBackgroundVisibility(WatchFaceStyle.BACKGROUND_VISIBILITY_INTERRUPTIVE)
                     .setShowSystemUiTime(false);
 
-            if(mLightTheme) { watchfaceStyleBuilder = watchfaceStyleBuilder.setViewProtectionMode(WatchFaceStyle.PROTECT_STATUS_BAR | WatchFaceStyle.PROTECT_HOTWORD_INDICATOR); }
+            if (mLightTheme) {
+                watchfaceStyleBuilder = watchfaceStyleBuilder.setViewProtectionMode(WatchFaceStyle.PROTECT_STATUS_BAR | WatchFaceStyle.PROTECT_HOTWORD_INDICATOR);
+            }
 
             setWatchFaceStyle(watchfaceStyleBuilder.build());
         }
 
         @Override
         public void onDestroy() {
+            Wearable.DataApi.removeListener(apiClient, this);
+            apiClient.disconnect();
+
             mUpdateTimeHandler.removeMessages(MSG_UPDATE_TIME);
             super.onDestroy();
         }
@@ -166,7 +197,7 @@ public class ExampleWatchFace extends CanvasWatchFaceService {
                 return;
             }
             mRegisteredTimeZoneReceiver = true;
-            IntentFilter filter = new IntentFilter(Intent.ACTION_TIMEZONE_CHANGED);
+            final IntentFilter filter = new IntentFilter(Intent.ACTION_TIMEZONE_CHANGED);
             ExampleWatchFace.this.registerReceiver(mTimeZoneReceiver, filter);
         }
 
@@ -203,8 +234,8 @@ public class ExampleWatchFace extends CanvasWatchFaceService {
         private void handleUpdateTimeMessage() {
             invalidate();
             if (shouldTimerBeRunning()) {
-                long timeMs = System.currentTimeMillis();
-                long delayMs = INTERACTIVE_UPDATE_RATE_MS - (timeMs % INTERACTIVE_UPDATE_RATE_MS);
+                final long timeMs = System.currentTimeMillis();
+                final long delayMs = INTERACTIVE_UPDATE_RATE_MS - (timeMs % INTERACTIVE_UPDATE_RATE_MS);
                 mUpdateTimeHandler.sendEmptyMessageDelayed(MSG_UPDATE_TIME, delayMs);
             }
         }
@@ -237,18 +268,48 @@ public class ExampleWatchFace extends CanvasWatchFaceService {
             return mIsRound;
         }
 
+        @Override
+        public void onConnected(@Nullable Bundle bundle) {
+            Log.d(TAG, "onConnected");
+            Wearable.DataApi.addListener(apiClient, this);
+        }
+
+        @Override
+        public void onConnectionSuspended(int i) {
+            Log.d(TAG, "on conn sus");
+        }
+
+        @Override
+        public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
+            Log.d(TAG, "on conn failed");
+        }
+
+        @Override
+        public void onDataChanged(DataEventBuffer dataEventBuffer) {
+            Log.d(TAG, "onDataChanged");
+            final DataMap dataMap = DataMapItem.fromDataItem(
+                    dataEventBuffer.get(0).getDataItem()).getDataMap();
+
+            mWatchfaceDrawer.setWeather(
+                    dataMap.getString("Day"),
+                    dataMap.getString("Low"),
+                    dataMap.getString("High"),
+                    dataMap.getString("Description"));
+        }
+
+
     }
 
     private static class EngineHandler extends Handler {
         private final WeakReference<ExampleWatchFace.Engine> mWeakReference;
 
-        public EngineHandler(ExampleWatchFace.Engine reference) {
+        EngineHandler(ExampleWatchFace.Engine reference) {
             mWeakReference = new WeakReference<>(reference);
         }
 
         @Override
         public void handleMessage(Message msg) {
-            ExampleWatchFace.Engine engine = mWeakReference.get();
+            final ExampleWatchFace.Engine engine = mWeakReference.get();
             if (engine != null) {
                 switch (msg.what) {
                     case MSG_UPDATE_TIME:

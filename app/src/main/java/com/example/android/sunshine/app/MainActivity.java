@@ -228,8 +228,6 @@ public class MainActivity extends AppCompatActivity implements ForecastFragment.
         Wearable.DataApi.addListener(apiClient, this);
     }
 
-    private int count = 0;
-
     @Override
     public void sendData(Bundle b) {
         //create the dataMapRequest with a path from constants.Path must start with a /
