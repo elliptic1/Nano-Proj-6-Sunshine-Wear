@@ -20,8 +20,10 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Rect;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -35,16 +37,20 @@ import android.view.WindowInsets;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.common.api.ResultCallback;
+import com.google.android.gms.wearable.Asset;
 import com.google.android.gms.wearable.DataApi;
 import com.google.android.gms.wearable.DataEventBuffer;
 import com.google.android.gms.wearable.DataMap;
 import com.google.android.gms.wearable.DataMapItem;
 import com.google.android.gms.wearable.Wearable;
 
+import java.io.InputStream;
 import java.lang.ref.WeakReference;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
 import java.util.TimeZone;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Analog watch face with a ticking second hand. In ambient mode, the second hand isn't shown. On
@@ -106,10 +112,7 @@ public class ExampleWatchFace extends CanvasWatchFaceService {
                     .addConnectionCallbacks(this)
                     .addApi(Wearable.API)
                     .build();
-
             apiClient.connect();
-
-
         }
 
         private void setNewWatchFaceStyle() {
@@ -295,8 +298,40 @@ public class ExampleWatchFace extends CanvasWatchFaceService {
                     dataMap.getString("Low"),
                     dataMap.getString("High"),
                     dataMap.getString("Description"));
+
+            AsyncTask.execute(new Runnable() {
+                @Override
+                public void run() {
+                    loadBitmapFromAsset(dataMap.getAsset("Image"));
+                }
+            });
         }
 
+        void loadBitmapFromAsset(Asset asset) {
+            if (asset == null) {
+                throw new IllegalArgumentException("Asset must be non-null");
+            }
+            ConnectionResult result =
+                    apiClient.blockingConnect(2000, TimeUnit.MILLISECONDS);
+            if (!result.isSuccess()) {
+                return;
+            }
+
+            // convert asset into a file descriptor and block until it's ready
+            Wearable.DataApi.getFdForAsset(apiClient, asset)
+                    .setResultCallback(new ResultCallback<DataApi.GetFdForAssetResult>() {
+                        @Override
+                        public void onResult(@NonNull DataApi.GetFdForAssetResult getFdForAssetResult) {
+                            final InputStream assetInputStream = getFdForAssetResult.getInputStream();
+                            if (assetInputStream == null) {
+                                Log.w(TAG, "Requested an unknown Asset.");
+                            }
+                            // decode the stream into a bitmap
+                            mWatchfaceDrawer.setImage(BitmapFactory.decodeStream(assetInputStream));
+                        }
+                    });
+
+        }
 
     }
 

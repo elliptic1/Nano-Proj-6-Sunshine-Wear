@@ -17,6 +17,8 @@ package com.example.android.sunshine.app;
 
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
@@ -41,6 +43,7 @@ import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.PendingResult;
 import com.google.android.gms.common.api.Result;
 import com.google.android.gms.common.api.ResultCallback;
+import com.google.android.gms.wearable.Asset;
 import com.google.android.gms.wearable.DataApi;
 import com.google.android.gms.wearable.DataEventBuffer;
 import com.google.android.gms.wearable.DataItemBuffer;
@@ -48,6 +51,8 @@ import com.google.android.gms.wearable.DataMapItem;
 import com.google.android.gms.wearable.PutDataMapRequest;
 import com.google.android.gms.wearable.PutDataRequest;
 import com.google.android.gms.wearable.Wearable;
+
+import java.io.ByteArrayOutputStream;
 
 public class MainActivity extends AppCompatActivity implements ForecastFragment.Callback,
         GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener,
@@ -180,20 +185,20 @@ public class MainActivity extends AppCompatActivity implements ForecastFragment.
             // In two-pane mode, show the detail view in this activity by
             // adding or replacing the detail fragment using a
             // fragment transaction.
-            Bundle args = new Bundle();
+            final Bundle args = new Bundle();
             args.putParcelable(DetailFragment.DETAIL_URI, contentUri);
 
-            DetailFragment fragment = new DetailFragment();
+            final DetailFragment fragment = new DetailFragment();
             fragment.setArguments(args);
 
             getSupportFragmentManager().beginTransaction()
                     .replace(R.id.weather_detail_container, fragment, DETAILFRAGMENT_TAG)
                     .commit();
         } else {
-            Intent intent = new Intent(this, DetailActivity.class)
+            final Intent intent = new Intent(this, DetailActivity.class)
                     .setData(contentUri);
 
-            ActivityOptionsCompat activityOptions =
+            final ActivityOptionsCompat activityOptions =
                     ActivityOptionsCompat.makeSceneTransitionAnimation(this,
                             new Pair<View, String>(vh.mIconView, getString(R.string.detail_icon_transition_name)));
             ActivityCompat.startActivity(this, intent, activityOptions.toBundle());
@@ -206,7 +211,7 @@ public class MainActivity extends AppCompatActivity implements ForecastFragment.
      * the Google Play Store or enable it in the device's system settings.
      */
     private boolean checkPlayServices() {
-        GoogleApiAvailability apiAvailability = GoogleApiAvailability.getInstance();
+        final GoogleApiAvailability apiAvailability = GoogleApiAvailability.getInstance();
         int resultCode = apiAvailability.isGooglePlayServicesAvailable(this);
         if (resultCode != ConnectionResult.SUCCESS) {
             if (apiAvailability.isUserResolvableError(resultCode)) {
@@ -228,15 +233,26 @@ public class MainActivity extends AppCompatActivity implements ForecastFragment.
         Wearable.DataApi.addListener(apiClient, this);
     }
 
+    private static Asset createAssetFromBitmap(Bitmap bitmap) {
+        final ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
+        bitmap.compress(Bitmap.CompressFormat.PNG, 100, byteStream);
+        return Asset.createFromBytes(byteStream.toByteArray());
+    }
+
     @Override
     public void sendData(Bundle b) {
         //create the dataMapRequest with a path from constants.Path must start with a /
-        PutDataMapRequest putDataMapRequest = PutDataMapRequest.create(Constants.RUN_UPDATE_NOTIFICATION);
+        final PutDataMapRequest putDataMapRequest = PutDataMapRequest.create(Constants.RUN_UPDATE_NOTIFICATION);
         putDataMapRequest.getDataMap().putLong("Time", System.currentTimeMillis());
         putDataMapRequest.getDataMap().putString("Day", b.getString("Day"));
         putDataMapRequest.getDataMap().putString("High", b.getString("High"));
         putDataMapRequest.getDataMap().putString("Low", b.getString("Low"));
         putDataMapRequest.getDataMap().putString("Description", b.getString("Description"));
+
+        final Bitmap bitmap = BitmapFactory.decodeResource(getResources(), b.getInt("Image"));
+        final Asset asset = createAssetFromBitmap(bitmap);
+        putDataMapRequest.getDataMap().putAsset("Image", asset);
+
         PutDataRequest request = putDataMapRequest.asPutDataRequest();
         Log.d(TAG, "put data");
         Wearable.DataApi.putDataItem(apiClient, request).setResultCallback(new ResultCallback() {
@@ -248,12 +264,12 @@ public class MainActivity extends AppCompatActivity implements ForecastFragment.
                 } else {
                     //data sync was  success
                     Log.d(TAG, "put data was success");
-                    PendingResult<DataItemBuffer> results = Wearable.DataApi.getDataItems(apiClient);
+                    final PendingResult<DataItemBuffer> results = Wearable.DataApi.getDataItems(apiClient);
                     results.setResultCallback(new ResultCallback<DataItemBuffer>() {
                         @Override
                         public void onResult(DataItemBuffer dataItems) {
                             if (dataItems.getCount() != 0) {
-                                DataMapItem dataMapItem = DataMapItem.fromDataItem(dataItems.get(0));
+                                final DataMapItem dataMapItem = DataMapItem.fromDataItem(dataItems.get(0));
 
                                 // This should read the correct value.
                                 long time = dataMapItem.getDataMap().getLong("Time");

@@ -19,7 +19,9 @@ package com.tbse.mywearapplication;
 
 import android.content.Context;
 import android.content.res.Resources;
+import android.graphics.Bitmap;
 import android.graphics.Canvas;
+import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.RectF;
@@ -48,6 +50,7 @@ class WatchFaceDrawer {
     private String high = "high";
     private String low = "low";
     private String weatherDescription = "desc";
+    private Bitmap image;
 
     // put your resources here (Paint objects, dimensions, colors, …)
 
@@ -86,11 +89,6 @@ class WatchFaceDrawer {
     }
 
     public void setMobilePreview(Context context, boolean isMobilePreview) {
-        Resources res = context.getResources();
-
-        // here you can change specific resources, based on whether the watch face
-        // is drawn in the phone app or on the watch
-
         mIsMobilePreview = isMobilePreview;
         mBackgroundPaint.setAntiAlias(isMobilePreview);
 
@@ -113,6 +111,10 @@ class WatchFaceDrawer {
             mMinuteHandPaint.setColor(ContextCompat.getColor(context, inAmbientMode ? R.color.low_bit_ambient_hand : R.color.minute_hand));
             mHourHandPaint.setColor(ContextCompat.getColor(context, inAmbientMode ? R.color.low_bit_ambient_hand : R.color.hour_hand));
         }
+    }
+
+    void setImage(Bitmap bitmap) {
+        this.image = bitmap;
     }
 
     void setWeather(String day, String low, String high, String desc) {
@@ -168,6 +170,14 @@ class WatchFaceDrawer {
             canvas.drawRect(0, 0, canvas.getWidth(), canvas.getHeight(), mBackgroundPaint);
         }
 
+        // Draw weather icon
+        if (image != null) {
+            Matrix matrix = new Matrix();
+            matrix.setTranslate(50, 90);
+            matrix.preScale(0.2f, 0.2f);
+            canvas.drawBitmap(image, matrix, null);
+        }
+
         final float secRot = calendar.get(Calendar.SECOND) / 30f * (float) Math.PI;
         final int minutes = calendar.get(Calendar.MINUTE);
         final float minRot = minutes / 30f * (float) Math.PI;
@@ -196,7 +206,10 @@ class WatchFaceDrawer {
         canvas.drawText(low, 50, 65, isAmbient ? ambientTextPaint : textPaint);
         canvas.drawText(high, 80, 65, isAmbient ? ambientTextPaint : textPaint);
         canvas.drawText(weatherDescription, 50, 80, isAmbient ? ambientTextPaint : textPaint);
+
     }
+
+    static String TAG = "WatchFaceDrawer";
 
 }
 

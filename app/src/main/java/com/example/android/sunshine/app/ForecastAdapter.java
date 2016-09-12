@@ -189,6 +189,7 @@ class ForecastAdapter extends RecyclerView.Adapter<ForecastAdapter.ForecastAdapt
             bundle.putString("Description", description);
             bundle.putString("High", highString);
             bundle.putString("Low", lowString);
+            bundle.putInt("Image", defaultImage);
             wearDataSender.sendData(bundle);
         }
     }
