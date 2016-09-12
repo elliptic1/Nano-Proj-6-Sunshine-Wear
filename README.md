@@ -2,6 +2,8 @@
 
 # Some watchface code from https://github.com/patloew/watch-face-example
 
+Put your Weather API key in the app/buil.gradle file at line 20
+
 ---- Original README-----
 Advanced Android Sample App
 ===================================
